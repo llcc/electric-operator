@@ -351,6 +351,10 @@ recompile electric-operator. It's like this because doing the
                                        (electric-operator-get-rules-trie-for-mode 'text-mode)
                                      (make-electric-operator--trie)))
 
+     ;; Find the rules for org-mode
+     ((equal major-mode 'org-mode)
+      (electric-operator-org-mode))
+     
      ;; Try to find an entry for this mode in the table
      ((electric-operator-get-rules-trie-for-mode major-mode))
 
@@ -463,8 +467,11 @@ inserts surrounding spaces, e.g., `=' becomes ` = ',`+=' becomes ` += '."
 if not inside any parens."
   (interactive)
   (let ((ppss (syntax-ppss)))
-    (when (nth 1 ppss)
-      (char-after (nth 1 ppss)))))
+    (cond ((eq major-mode 'org-mode)
+           (unless (eq (car ppss) 3)
+             (char-after (nth 1 ppss))))
+          ((nth 1 ppss)
+           (char-after (nth 1 ppss))))))
 
 (defun electric-operator-probably-unary-operator? ()
   "Try to guess if the operator we are about to insert will be unary
@@ -1332,6 +1339,18 @@ Also handles C++ lambda capture by reference."
                                       (cons "..<" nil))
 
 
+
+;;; Org-mode
+
+(defun electric-operator-org-mode ()
+  "Get rules for the language of source block"
+  (let* ((org-babel-language-symbol (car (org-babel-get-src-block-info))))
+    (if org-babel-language-symbol
+        (cond ((member org-babel-language-symbol (list "jupyter-python" "python" "ipython" "jupyter"))
+               (electric-operator-get-rules-trie-for-mode 'python-mode))
+              ((electric-operator-get-rules-trie-for-mode 'org-babel-language-symbol)))
+      (electric-operator-get-rules-trie-for-mode 'text-mode))))
+
 
 (provide 'electric-operator)
 
